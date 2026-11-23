@@ -109,6 +109,14 @@ The daemon starts from `sysinit.target` so it can show `boot` while the system
 comes up that early; it shows the clock once idle, and `ERRn` for 4 s whenever
 `systemctl --failed` is non-empty.
 
+## Shutdown behaviour
+
+These boxes have no power button (the vendor expects the IR remote), so a
+shutdown **halts the SoC but never drops the 5 V rail** — the panel keeps
+whatever was last latched. `vfdd` therefore latches `bye` in its SIGTERM handler,
+so a halted box shows `bye` until someone cuts power. If you see the clock still
+running after a shutdown, the machine is merely halted, not stuck.
+
 ## Notes / gotchas
 
 - `gpioset` in gpiod v2 has no `--mode=wait`; hold lines with `-p <period>`.

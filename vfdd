@@ -20,6 +20,7 @@ If the daemon is not running the CLI falls back to driving the pins directly.
 
 import json
 import os
+import signal
 import selectors
 import socket
 import subprocess
@@ -176,7 +177,17 @@ class Display:
         conn.close()
 
 
+_STOP = False
+
+
+def _on_signal(signum, frame):
+    global _STOP
+    _STOP = True
+
+
 def main():
+    signal.signal(signal.SIGTERM, _on_signal)
+    signal.signal(signal.SIGINT, _on_signal)
     try:
         os.unlink(SOCK)
     except FileNotFoundError:
@@ -192,7 +203,7 @@ def main():
 
     disp = Display()
     next_tick = 0.0
-    while True:
+    while not _STOP:
         now = time.monotonic()
         timeout = max(0.0, min(0.2, next_tick - now)) if next_tick else 0.2
         for key, _ in sel.select(timeout):
@@ -210,6 +221,16 @@ def main():
             except OSError:
                 break
             next_tick = now + max(0.05, interval)
+
+    # leaving: latch a friendly frame, since the panel keeps it until power dies
+    try:
+        disp.vfd.commit(render("bye"), 4, [])
+    except OSError:
+        pass
+    try:
+        os.unlink(SOCK)
+    except OSError:
+        pass
 
 
 if __name__ == "__main__":
