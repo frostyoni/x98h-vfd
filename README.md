@@ -119,6 +119,20 @@ nothing ever collides with the clock:
 Text length is unlimited (it scrolls). If the daemon isn't running, the CLI falls
 back to driving the pins directly.
 
+## Pushing messages from the fleet
+
+`vfdd` also listens on **TCP 8781**, so any host can post without SSH:
+
+```sh
+curl -s -X POST http://192.168.100.46:8781/ -d '{"text":"BACKUP DONE","duration":10}'
+curl -s -X POST http://192.168.100.46:8781/ -d 'text=HI&duration=4'      # form
+curl -s -X POST http://192.168.100.46:8781/ -d '{"text":"REBOOTING","hold":true,"priority":20}'
+```
+
+Same fields as the CLI (`text`, `scroll`, `delay`, `loops`, `duration`, `hold`,
+`priority`, `bright`, `icons`). Protected by `fleetfw` (LAN-only). Pair it with a
+skill/job hook to announce backup results, long builds, or alerts.
+
 ## Install (Armbian/Debian, python3-libgpiod)
 
 ```sh
@@ -161,3 +175,5 @@ running after a shutdown, the machine is merely halted, not stuck.
 | `vfdd` | daemon: owns the pins, clock, arbitration, failure watcher |
 | `x98h-vfd` | CLI client (with direct-mode fallback) |
 | `vfdd.service` | systemd unit |
+
+HTTP: `POST http://<host>:8781/` with JSON or form-encoded fields.

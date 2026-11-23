@@ -20,7 +20,10 @@ If the daemon is not running the CLI falls back to driving the pins directly.
 
 import json
 import os
+import queue
 import signal
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import selectors
 import socket
 import subprocess
@@ -141,6 +144,18 @@ class Display:
             self.claim({"text": f"ERR{n}", "duration": 4.0, "priority": ALERT})
             self.fail_seen = n
 
+    # ---- request dispatch -------------------------------------------------
+    def dispatch(self, req):
+        op = req.get("op", "show")
+        if op == "show":
+            return self.claim(req)
+        if op == "release":
+            return self.release()
+        if op == "status":
+            return {"ok": True, "message": bool(self.msg),
+                    "priority": self.msg["priority"] if self.msg else CLOCK}
+        return {"ok": False, "error": f"unknown op {op!r}"}
+
     # ---- socket -----------------------------------------------------------
     def handle(self, conn):
         conn.settimeout(2.0)
@@ -160,21 +175,62 @@ class Display:
             conn.close()
             return
 
-        op = req.get("op", "show")
-        if op == "show":
-            resp = self.claim(req)
-        elif op == "release":
-            resp = self.release()
-        elif op == "status":
-            resp = {"ok": True, "message": bool(self.msg),
-                    "priority": self.msg["priority"] if self.msg else CLOCK}
-        else:
-            resp = {"ok": False, "error": f"unknown op {op!r}"}
+        resp = self.dispatch(req)
         try:
             conn.sendall((json.dumps(resp) + "\n").encode())
         except OSError:
             pass
         conn.close()
+
+
+
+HTTP_PORT = 8781
+HTTP_QUEUE = queue.Queue(maxsize=64)
+
+
+class Handler(BaseHTTPRequestHandler):
+    def _reply(self, code, obj):
+        body = (json.dumps(obj) + "\n").encode()
+        self.send_response(code)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_POST(self):
+        n = int(self.headers.get("Content-Length") or 0)
+        raw = self.rfile.read(n).decode(errors="replace") if n else ""
+        req = {}
+        try:
+            req = json.loads(raw) if raw.strip().startswith("{") else {}
+        except ValueError:
+            req = {}
+        if not req:
+            from urllib.parse import parse_qs
+            for k, v in parse_qs(raw).items():
+                req[k] = v[0]
+        if not req:
+            req = {"text": raw}
+        req.setdefault("op", "show")
+        HTTP_QUEUE.put(req)
+        self._reply(202, {"ok": True, "queued": True})
+
+    def do_GET(self):
+        if self.path.startswith("/status"):
+            HTTP_QUEUE.put({"op": "status", "_reply": True})
+            self._reply(200, {"ok": True, "note": "see /status via POST or the CLI"})
+        else:
+            self._reply(200, {"ok": True, "usage": "POST text, or {text,duration,hold,priority}"})
+
+    def log_message(self, *a):
+        pass
+
+
+def start_http():
+    srv = ThreadingHTTPServer(("0.0.0.0", HTTP_PORT), Handler)
+    t = threading.Thread(target=srv.serve_forever, daemon=True)
+    t.start()
+    return srv
 
 
 _STOP = False
@@ -202,6 +258,10 @@ def main():
     sel.register(srv, selectors.EVENT_READ)
 
     disp = Display()
+    try:
+        http_srv = start_http()
+    except OSError:
+        http_srv = None
     next_tick = 0.0
     while not _STOP:
         now = time.monotonic()
@@ -213,6 +273,13 @@ def main():
                     disp.handle(conn)
                 except OSError:
                     pass
+        while True:
+            try:
+                req = HTTP_QUEUE.get_nowait()
+            except queue.Empty:
+                break
+            if not req.pop("_reply", False):
+                disp.dispatch(req)
         now = time.monotonic()
         disp.check_failed(now)
         if now >= next_tick:
