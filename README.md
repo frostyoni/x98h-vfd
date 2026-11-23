@@ -58,16 +58,42 @@ icons     bit 3, selected per segment address:
 Icons **share the address byte with a segment**, so icon bits must be OR'd into
 the segment byte — writing an icon separately silently wipes that segment.
 
+## Segment convention
+
+Segments are named the standard way, and these are the names used when describing
+what lights up during probing:
+
+```
+     aaaa
+    f    b
+    f    b
+     gggg
+    e    c
+    e    c
+     dddd
+```
+
+| segment | position | chip address |
+|---|---|---|
+| `a` | top bar | 0 |
+| `b` | upper right | 2 |
+| `c` | lower right | 4 |
+| `d` | bottom bar | 6 |
+| `e` | lower left | 8 |
+| `f` | upper left | 10 |
+| `g` | middle bar | 12 |
+
 ## Letter approximations
 
 A 7-segment display has no real X, K, M, W, etc. The convention used here:
 
 | letter | rendered as | | letter | rendered as |
 |---|---|---|---|---|
-| X, K, M, W | `H` | | Z, S | `2` |
-| G | `6` | | N | `n` |
-| V | `U` | | Y, y | `y` |
-| Q | `0` | | B | `b` |
+| X, K, M, W | `H` | | Z | `2` |
+| G | `6` | | S | `5` |
+| N | `n` | | V | `U` |
+| Y, y | `y` | | Q | `0` |
+| B | `b` | | R | `r` |
 
 Unknown characters render blank, so text degrades predictably.
 
