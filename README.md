@@ -100,11 +100,11 @@ Unknown characters render blank, so text degrades predictably.
 ## Architecture
 
 ```
-            ┌──────────────┐  /run/x98h-vfd.sock      ┌────────────────┐
-  callers →│ x98h-vfd CLI    │ ───────────────────→ │      vfdd         │ → PC2/PC7/PC12
-            └──────────────┘        (JSON)            │  owns the pins    │
-                                                         │  clock when idle  │
-                                                         └────────────────┘
+            ┌──────────────┐  /run/x98h-vfd.sock  ┌──────────────────┐
+  callers → │ x98h-vfd CLI │ ───────────────────→ │      vfdd        │ → PC2/PC7/PC12
+            └──────────────┘        (JSON)        │  owns the pins   │
+                                                  │  clock when idle │
+                                                  └──────────────────┘
 ```
 
 One process owns the GPIO lines (`vfdd`). Everything else hands it messages, so
