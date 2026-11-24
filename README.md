@@ -97,6 +97,24 @@ A 7-segment display has no real X, K, M, W, etc. The convention used here:
 
 Unknown characters render blank, so text degrades predictably.
 
+## If your panel is undocumented
+
+The driver only works because the mapping is known. For a different box:
+
+1. Look for a `vfd`/`led` node in the **vendor bootloader's** DTB (eMMC `VNDRBOOT`),
+   not in the running system's device tree — see the `aw_vfd` node above for the
+   shape it takes (`vfd_data_gpio`, `vfd_clock_gpio`, `vfd_stb_gpio`).
+2. With those three pads driven by `gpioset` (gpiod v2 has no `--mode=wait`; hold
+   with `-p`), write `0xFF` to one address at a time and note what lights.
+3. If a single address lights **one segment on every digit**, the matrix is
+   transposed like this one: address = segment, data bit = digit.
+4. Then walk the data bits one at a time to find which bit is which digit (and
+   which bits are the icon row). That is exactly how the table above was built.
+
+Two traps: odd/even address gaps are normal (only some addresses are wired), and
+icons usually share the same address byte as a segment — they are extra bits, so
+they must be OR'd into the segment byte rather than written separately.
+
 ## Architecture
 
 ```
