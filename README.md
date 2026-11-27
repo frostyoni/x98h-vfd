@@ -142,9 +142,9 @@ back to driving the pins directly.
 `vfdd` also listens on **TCP 8781**, so any host can post without SSH:
 
 ```sh
-curl -s -X POST http://192.168.100.46:8781/ -d '{"text":"BACKUP DONE","duration":10}'
-curl -s -X POST http://192.168.100.46:8781/ -d 'text=HI&duration=4'      # form
-curl -s -X POST http://192.168.100.46:8781/ -d '{"text":"REBOOTING","hold":true,"priority":20}'
+curl -s -X POST http://192.168.xxx.xx:8781/ -d '{"text":"BACKUP DONE","duration":10}'
+curl -s -X POST http://192.168.xxx.xx:8781/ -d 'text=HI&duration=4'      # form
+curl -s -X POST http://192.168.xxx.xx:8781/ -d '{"text":"REBOOTING","hold":true,"priority":20}'
 ```
 
 Same fields as the CLI (`text`, `scroll`, `delay`, `loops`, `duration`, `hold`,
