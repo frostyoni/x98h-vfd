@@ -148,7 +148,7 @@ curl -s -X POST http://192.168.100.46:8781/ -d '{"text":"REBOOTING","hold":true,
 ```
 
 Same fields as the CLI (`text`, `scroll`, `delay`, `loops`, `duration`, `hold`,
-`priority`, `bright`, `icons`). Protected by `fleetfw` (LAN-only). Pair it with a
+`priority`, `bright`, `icons`). Protected by `fleetfw` (any fleet/homelab firewall you set up, LAN-only). Pair it with a
 skill/job hook to announce backup results, long builds, or alerts.
 
 ## Install (Armbian/Debian, python3-libgpiod)
